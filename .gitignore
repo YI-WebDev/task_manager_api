@@ -1,4 +1,4 @@
-# Python
+# Python related files
 *.py[cod]
 __pycache__/
 *.so
@@ -21,7 +21,7 @@ venv/
 env/
 ENV/
 
-# Django
+# Django related files
 *.log
 local_settings.py
 db.sqlite3
@@ -30,21 +30,24 @@ media/
 static/
 staticfiles/
 
-# IDE
+# IDE related files
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# OS
+# Operating System files
 .DS_Store
 Thumbs.db
 
-# その他
+# Miscellaneous
 *.bak
 *.tmp
 *.temp
 .env
 .coverage
 htmlcov/
+
+# Personal virtual environment
+/myapp
