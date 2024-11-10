@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: task_manager_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+      args:
+        - APP_PATH=/src
+        - PYTHON_IMAGE=python:3.12-slim
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/src
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    container_name: task_manager_db
+    image: postgres:16-alpine
+    restart: always
+    volumes:
+      - type: volume
+        source: task_manager_db
+        target: /var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - '${DB_EXPOSE_PORT}:${DB_PORT}'
+
+volumes:
+  task_manager_db:

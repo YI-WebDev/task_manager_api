@@ -1,34 +1,57 @@
-# Python 3.11-slim イメージをベースに使用
-FROM python:3.11-slim
+# Define build arguments
+ARG APP_PATH="/src"
+ARG PYTHON_IMAGE="python:3.12-slim"
 
-# 作業ディレクトリを設定
-WORKDIR /src
+# Build stage
+FROM ${PYTHON_IMAGE} AS build
 
-# 必要なシステムパッケージをインストール
+ARG APP_PATH
+WORKDIR ${APP_PATH}
+
+# Install system dependencies for build
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
-        curl && \
-    rm -rf /var/lib/apt/lists/*
+        curl \
+        git \
+        pkg-config \
+    && pip install --upgrade pip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Poetry のインストール
-ENV PATH="/root/.local/bin:${PATH}"
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
-    poetry config virtualenvs.create false
+# Configure Poetry
+ENV POETRY_HOME="/opt/poetry" \
+    POETRY_VERSION=1.8.4 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_NO_INTERACTION=1 \
+    PATH="/opt/poetry/bin:$PATH"
 
-# Poetry の設定と依存関係のインストール
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Install dependencies
 COPY pyproject.toml poetry.lock ./
-RUN poetry install
+RUN poetry install --no-interaction --no-ansi && rm -rf /root/.cache/pypoetry/*
 
-# アプリケーションコードをコピー
+# Production stage
+FROM ${PYTHON_IMAGE}
+
+ARG APP_PATH
+WORKDIR ${APP_PATH}
+
+# Configure Python environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=${APP_PATH}
+
+# Copy necessary files from build stage
+COPY --from=build /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=build /usr/lib/x86_64-linux-gnu/libpq.so.5 /usr/lib/x86_64-linux-gnu/
+
+# Copy application code
 COPY . .
 
-# 環境変数の設定
-ENV PYTHONUNBUFFERED 1
-
-# ポートを公開
 EXPOSE 8000
 
-# 開発サーバーを起動
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
