@@ -3,6 +3,7 @@ import random
 from hashids import Hashids
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 
 def create_unique_hash(model, instance):
@@ -46,6 +47,9 @@ class HashIDManager(models.Manager):
         instance.save()
         return instance
 
+class HashedModelsManager(HashIDManager, LogicalDeleteManager):
+    pass
+
 
 class TaskManagerBaseModel(models.Model):
     """
@@ -87,4 +91,53 @@ class HashIDModel(TaskManagerBaseModel):
         abstract = True
 
     hash_id = models.CharField(max_length=50, unique=True)
-    objects = HashIDManager()
+    objects = HashedModelsManager()
+
+
+class CustomBaseUser(AbstractBaseUser, HashIDModel):
+    """
+    Custom Django BaseUser.
+    """
+
+    class Meta:
+        abstract = True
+
+    username = models.CharField(
+        _('username'),
+        max_length=150,
+        unique=True,
+    )
+    email = models.EmailField(_('email address'), blank=True)
+    is_staff = models.BooleanField(
+        _('staff status'),
+        default=False,
+    )
+    is_active = models.BooleanField(
+        _('active'),
+        default=True,
+    )
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+
+    EMAIL_FIELD = 'email'
+    USERNAME_FIELD = 'username'
+    
+    def get_username(self):
+        """Return the username for this User."""
+        return getattr(self, self.USERNAME_FIELD)
+    
+    def soft_delete(self):
+        """Execute logical deletion of user account"""
+        self.is_active = False
+        self.deactivated_at = datetime.datetime.now()
+        self.save()
+    
+    def reactivate(self):
+        """Reactivate logically deleted user"""
+        self.is_active = True
+        self.deactivated_at = None
+        self.save()
+    
+    @property
+    def is_deleted(self):
+        """Check if user is logically deleted"""
+        return not self.is_active and self.deactivated_at is not None

@@ -47,7 +47,7 @@ OTHERS_APPS = [
 ]
 
 LOCAL_APPS = [
-    'resources.user',
+    'resources.users',
 ]
 
 
@@ -151,3 +151,4 @@ REST_FRAMEWORK = {
 }
 
 AUTH_TOKEN_TTL_HOURS = 12
+USER_PASSWORD_EXPIRY_DAYS = 90

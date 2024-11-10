@@ -1,23 +1,25 @@
-from adrf.viewsets import ViewSet as ADRFViewSet
-from django.utils.functional import classproperty
+from typing import ClassVar
 from rest_framework import viewsets
+from ninja import NinjaAPI
+from ninja.router import Router
 
+api = NinjaAPI()
+router = Router()
 
-class AsyncViewSet(ADRFViewSet):
-    @classproperty
-    def view_is_async(cls) -> bool:
-        return True
+class AsyncNinjaViewSet:
+    view_is_async: ClassVar[bool] = True
+    
+    async def dispatch(self, request, *args, **kwargs):
+        return await super().dispatch(request, *args, **kwargs)
 
-
-class BaseGenericViewSet(AsyncViewSet, viewsets.GenericViewSet):
+class BaseGenericViewSet(AsyncNinjaViewSet, viewsets.GenericViewSet):
     """
     Base ViewSet for partial CRUD operations
     """
     lookup_field = 'hash_id'
 
-    def perform_destroy(self, instance):
-        instance.soft_delete()
-
+    async def perform_destroy(self, instance):
+        await instance.soft_delete()
 
 class BaseModelViewSet(BaseGenericViewSet):
     """
